@@ -8,7 +8,15 @@ if length(ARGS) > 2
 else
 	perplexity = 15.0
 end
-master_path = "/home/vit/vyzkum/anomaly_detection/data/UCI"
+
+host = gethostname()
+#master path where data will be stored
+if host == "vit"
+	master_path = "/home/vit/vyzkum/anomaly_detection/data/UCI"
+elseif host == "axolotl.utia.cas.cz"
+	master_path = "/home/skvara/work/anomaly_detection/data/UCI"
+end
+
 ppath = joinpath(master_path, "processed")
 datasets = filter(x->x[1:length(dataset)] == dataset, 
 	filter(x->length(x) >= length(dataset), readdir(ppath)))
