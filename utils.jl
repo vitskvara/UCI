@@ -35,11 +35,11 @@ Outer constructor for the Basicset struct using a folder in the Loda database.
 Transposes the arrays so that instances are columns.
 """
 Basicset(path::String) = (isdir(path)) ? Basicset(
-    txt2array(joinpath(path, "normal.txt"))',
-    txt2array(joinpath(path, "easy.txt"))',
-    txt2array(joinpath(path, "medium.txt"))',
-    txt2array(joinpath(path, "hard.txt"))',
-    txt2array(joinpath(path, "very_hard.txt"))',
+    transpose(txt2array(joinpath(path, "normal.txt"))),
+    transpose(txt2array(joinpath(path, "easy.txt"))),
+    transpose(txt2array(joinpath(path, "medium.txt"))),
+    transpose(txt2array(joinpath(path, "hard.txt"))),
+    transpose(txt2array(joinpath(path, "very_hard.txt"))),
     ) : error("No such path $path exists.")
 
 """
@@ -110,15 +110,16 @@ end
 Return a Basicset instance created from X with array boundaries indicated
 in inds.
 """
-function uncat(X, inds, transpose = false)
+function uncat(X, inds, trans = false)
     cinds = cumsum(inds)
-    if transpose
+    if trans
     	return Basicset(
-            X[:,1:cinds[1]]', 
-            X[:,cinds[1]+1:cinds[2]]',
-            X[:,cinds[2]+1:cinds[3]]',
-            X[:,cinds[3]+1:cinds[4]]',
-            X[:,cinds[4]+1:cinds[5]]')
+            transpose(X[:,1:cinds[1]]), 
+            transpose(X[:,cinds[1]+1:cinds[2]]),
+            transpose(X[:,cinds[2]+1:cinds[3]]),
+            transpose(X[:,cinds[3]+1:cinds[4]]),
+            transpose(X[:,cinds[4]+1:cinds[5]])
+            )
     else	
 	    return Basicset(
 	            X[:,1:cinds[1]], 
@@ -149,8 +150,8 @@ function nDtsne(X, n, reduce_dims = 0, max_iter = 1000; perplexity = 15.0,
     uN = min(N,max_samples) # no. of used samples
     println("sampling $uN samples")
     sinds = sort(sample(1:N, uN, replace = false))
-    Y = tsne(X[:,sinds]',n, reduce_dims, max_iter, perplexity;
-                verbose = verbose, progress = progress, kwargs...)'
+    Y = transpose(tsne(transpose(X[:,sinds]),n, reduce_dims, max_iter, perplexity;
+                verbose = verbose, progress = progress, kwargs...))
     return Y, sinds
 end
 
@@ -172,13 +173,13 @@ end
 
 Saves a Basicset to the folder "path" into individual .txt files.
 """
-function savetxt(bs::Basicset, path, transpose = true)
+function savetxt(bs::Basicset, path, trans = true)
     mkpath(path)
     for field in fieldnames(typeof(bs))
         x = getfield(bs, field)
         if prod(size(x)) > 0
-        	if transpose
-	            writedlm(string(joinpath(path, String(field)), ".txt"),x')
+        	if trans
+	            writedlm(string(joinpath(path, String(field)), ".txt"),transpose(x))
 	        else
 	        	writedlm(string(joinpath(path, String(field)), ".txt"),x)
 	        end
@@ -267,7 +268,7 @@ From a given inpath, it loads the data.csv file and creates N binary anomaly det
 in outpath.
 """
 function multiclass_to_ad(inpath::String, outpath::String, data_cols_start, class_col; 
-	data_cols_end = nothing, header=0,transpose=false)
+	data_cols_end = nothing, header=0,trans=false)
 	infile = joinpath(inpath, "data.csv")
 	df = CSV.File(infile, header = header) |> DataFrame
 	N,M = size(df)
@@ -275,7 +276,7 @@ function multiclass_to_ad(inpath::String, outpath::String, data_cols_start, clas
  	# extract data
  	data_cols_end == nothing ? nothing : M = data_cols_end
  	X = convert(Array, df[data_cols_start:M])
- 	transpose ? X = X' : nothing
+ 	trans ? X = transpose(X) : nothing
  	# extract class label
  	labels = df[class_col]
  	for class in unique(labels)
@@ -311,8 +312,8 @@ end
 
 function onehot(path::String,id::Int)
 	X, inds = cat(Basicset(path))
-	X = X'
+	X = transpose(X)
 	Y = onehot(X,id)
-	savetxt(uncat(Y',inds,true),path,false)
+	savetxt(uncat(transpose(Y),inds,true),path,false)
 	return Y, size(Y,2) - size(X,2), inds
 end
