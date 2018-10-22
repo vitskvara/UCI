@@ -344,6 +344,81 @@ function multiclass_to_ad(inpath::String, outpath::String, data_cols_start, clas
     return X, labels
 end
 
+"""
+	process_multiclass(inpath::String, outpath::String, data_cols_start, class_col; 
+	data_cols_end = nothing, header=0,trans=false)
+
+Extracts the largest class as the normal class, the rest as 'medium' anomalies,
+and stores class labels.
+"""
+function process_multiclass(inpath::String, outpath::String, data_cols_start, class_col; 
+    data_cols_end = nothing, header=0,trans=false)
+	infile = joinpath(inpath, "data.csv")
+    df = CSV.File(infile, header = header) |> DataFrame
+    N,M = size(df)
+    dataset = basename(inpath)
+	# extract data
+	data_cols_end == nothing ? nothing : M = data_cols_end
+	X = convert(Array, df[data_cols_start:M])
+	trans ? X = transpose(X) : nothing
+	# extract class label
+	labels = df[class_col]
+	classes = unique(labels)
+	class_sizes = [size(X[labels.==class,:],1) for class in classes]
+	i_max_class = argmax(class_sizes) # select the largest class as the normal one
+	max_class = classes[i_max_class]
+	anomalous, normal = multiclass_to_ad(X, labels, max_class)
+	class_path = joinpath(outpath,"$(dataset)-$(max_class)")
+	mkpath(class_path)
+	fn = joinpath(class_path, "normal.txt")
+	fa = joinpath(class_path, "medium.txt")
+	writedlm(fn, normal)
+	writedlm(fa, anomalous)
+	fln = joinpath(class_path, "normal_labels.txt")
+	flm = joinpath(class_path, "medium_labels.txt")
+	writedlm(fln, labels[labels.==max_class])
+	writedlm(flm, labels[labels.!=max_class])
+	return X, labels
+end
+
+"""
+	split_multiclass(inpath, outpath)
+"""
+function split_multiclass(inpath::String, outpath::String)
+	fln = joinpath(inpath, "normal_labels.txt")
+	if !isfile(fln)
+		println("no labels found, skipping...")
+		return nothing, nothing
+	else
+		# get labels
+		n_labels = readdlm(fln)
+		flm = joinpath(inpath, "medium_labels.txt")
+		a_labels = readdlm(flm)
+		labels = vec(cat(n_labels, a_labels, dims = 1))
+
+		# get data
+		X,inds = cat(Basicset(inpath))
+		X = Array(transpose(X))
+		n_class = n_labels[1]
+		classes = unique(labels)
+	    dataset = basename(inpath)
+		
+
+
+		# split them to multiple two class problems
+		for class in filter(x->x != n_class, classes)
+			normal, anomalous = multiclass_to_ad(X, labels, n_class, class)
+			class_path = joinpath(outpath,"$(dataset)-$(class)")
+			mkpath(class_path)
+			fn = joinpath(class_path, "normal.txt")
+			fa = joinpath(class_path, "medium.txt")
+			writedlm(fn, normal)
+			writedlm(fa, anomalous)
+		end
+		return X, labels
+	end
+end
+
 function onehot(x::Vector)
     cats = unique(x)
     M = length(cats)
@@ -371,3 +446,8 @@ function onehot(path::String,id::Int)
     return Y, size(Y,2) - size(X,2), inds
 end
 
+function copy_if_exists(file, dest)
+	if isfile(file)
+		cp(file, joinpath(dest, basename(file)); force = true)
+	end
+end

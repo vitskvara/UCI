@@ -24,16 +24,14 @@ for _dataset in datasets
 	inpath = joinpath(master_path, "processed", _dataset)
 	outpath = joinpath(master_path, "umap", _dataset)
 
+
 	# call tsne
 	dataset2D(inpath, outpath, "umap", true, max_samples; 
 		n_neighbors = n_neighbors,
 		min_dist = min_dist,
 		metric = metric)
 
-	# also, plot it
-	scatter_2D(outpath)
-	f = joinpath(master_path, "umap/plots", string(_dataset, ".png"))
-	mkpath(dirname(f))
-	savefig(f)
+	# also, copy labels if they are available
+	copy_if_exists(joinpath(inpath, "normal_labels.txt"), outpath)
+	copy_if_exists(joinpath(inpath, "medium_labels.txt"), outpath)
 end
-show()

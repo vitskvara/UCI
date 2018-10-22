@@ -1,7 +1,13 @@
+DATASET="ecoli"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-julia $DIR/../process_multiclass.jl ecoli 2 9 8
-echo "created multiclass problems, doing one-hot encoding and labeling"
-julia $DIR/../make_onehot_and_format.jl ecoli
-echo "processed, computing umap"
-#julia $DIR/../make_tsne.jl ecoli 2000
-julia $DIR/../make_umap.jl ecoli 2000
+julia $DIR/../process_raw.jl $DATASET 2 9 8
+echo "processed raw data, doing one-hot encoding and column labeling"
+#julia $DIR/../make_format.jl $DATASET 3
+julia $DIR/../make_onehot_and_format.jl $DATASET
+echo "processed, computing UMAP"
+julia $DIR/../make_umap.jl $DATASET 10000
+echo "done, if needed, dividing into multiple datasets"
+julia $DIR/../postprocess_multiclass.jl $DATASET
+echo "done, now creating UMAP plots"
+julia $DIR/../make_plots.jl $DATASET
+echo "Dataset $DATASET processed succesfuly!"

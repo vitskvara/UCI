@@ -1,7 +1,12 @@
+DATASET="breast-cancer-wisconsin"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-#julia process_multiclass.jl breast-cancer-wisconsin
-echo "created multiclass problems, doing one-hot encoding and labeling"
-julia $DIR/../make_onehot_and_format.jl breast-cancer-wisconsin
-echo "processed, computing umap"
-#julia $DIR/../make_tsne.jl breast-cancer-wisconsin 2500
-julia $DIR/../make_umap.jl breast-cancer-wisconsin 5000
+julia $DIR/../process_raw.jl $DATASET
+echo "processed raw data, doing one-hot encoding and column labeling"
+julia $DIR/../make_onehot_and_format.jl $DATASET
+echo "processed, computing UMAP"
+julia $DIR/../make_umap.jl $DATASET 10000
+echo "done, if needed, dividing into multiple datasets"
+julia $DIR/../postprocess_multiclass.jl $DATASET
+echo "done, now creating UMAP plots"
+julia $DIR/../make_plots.jl $DATASET
+echo "Dataset $DATASET processed succesfuly!"
