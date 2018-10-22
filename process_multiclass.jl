@@ -10,11 +10,7 @@ class_col = Int(Meta.parse(ARGS[3]))
 data_cols_end = (length(ARGS)>3 ? Int(Meta.parse(ARGS[4])) : nothing)
 host = gethostname()
 #master path where data will be stored
-if host == "vit"
-	master_path = "/home/vit/vyzkum/anomaly_detection/data/UCI"
-elseif host == "axolotl.utia.cas.cz"
-	master_path = "/home/skvara/work/anomaly_detection/data/UCI"
-end
+master_path = dirname(@__FILE__)
 inpath = joinpath(master_path, "raw", dataset)
 outpath = joinpath(master_path, "processed")
 

@@ -11,11 +11,7 @@ end
 
 host = gethostname()
 #master path where data will be stored
-if host == "vit"
-	master_path = "/home/vit/vyzkum/anomaly_detection/data/UCI"
-elseif host == "axolotl.utia.cas.cz"
-	master_path = "/home/skvara/work/anomaly_detection/data/UCI"
-end
+master_path = dirname(@__FILE__)
 
 ppath = joinpath(master_path, "processed")
 datasets = filter(x->x[1:length(dataset)] == dataset, 
@@ -26,10 +22,10 @@ for _dataset in datasets
 	outpath = joinpath(master_path, "tsne", _dataset)
 
 	# call tsne
-	dataset2D(inpath, outpath, "tsne", true, max_samples, perplexity)
+	dataset2D(inpath, outpath, "tsne", true, max_samples, perplexity = perplexity)
 
 	# also, plot it
-	scatter_tsne(outpath)
+	scatter_2D(outpath)
 	f = joinpath(master_path, "tsne/plots", string(_dataset, ".png"))
 	mkpath(dirname(f))
 	savefig(f)

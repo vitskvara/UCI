@@ -1,4 +1,7 @@
 using Statistics, StatsBase, DelimitedFiles, TSne, PyPlot, CSV, DataFrames
+using PyCall
+@pyimport umap
+
 import Base.cat
 
 Float = Float32
@@ -88,20 +91,20 @@ function standardize(Y::Array{T,2} where T<:Real)
 end
 
 """
-	save_format(path,cat_cols = nothing)
+    save_format(path,cat_cols = nothing)
 
 Call as save_format(dir, [1:3, 4:6]).
 """
 function save_format(path,cat_cols = nothing)
-	data = Basicset(path)
-	M,N = size(data.normal)
-	labels = fill(0,M)
-	if cat_cols != nothing
-		for (i,category) in enumerate(cat_cols)
-			labels[category] .= i
-		end
-	end
-	writedlm(joinpath(path,"data_types.txt"),labels)	    
+    data = Basicset(path)
+    M,N = size(data.normal)
+    labels = fill(0,M)
+    if cat_cols != nothing
+        for (i,category) in enumerate(cat_cols)
+            labels[category] .= i
+        end
+    end
+    writedlm(joinpath(path,"data_types.txt"),labels)        
 end
 
 """
@@ -113,21 +116,21 @@ in inds.
 function uncat(X, inds, trans = false)
     cinds = cumsum(inds)
     if trans
-    	return Basicset(
+        return Basicset(
             transpose(X[:,1:cinds[1]]), 
             transpose(X[:,cinds[1]+1:cinds[2]]),
             transpose(X[:,cinds[2]+1:cinds[3]]),
             transpose(X[:,cinds[3]+1:cinds[4]]),
             transpose(X[:,cinds[4]+1:cinds[5]])
             )
-    else	
-	    return Basicset(
-	            X[:,1:cinds[1]], 
-	            X[:,cinds[1]+1:cinds[2]],
-	            X[:,cinds[2]+1:cinds[3]],
-	            X[:,cinds[3]+1:cinds[4]],
-	            X[:,cinds[4]+1:cinds[5]])
-	end
+    else    
+        return Basicset(
+                X[:,1:cinds[1]], 
+                X[:,cinds[1]+1:cinds[2]],
+                X[:,cinds[2]+1:cinds[3]],
+                X[:,cinds[3]+1:cinds[4]],
+                X[:,cinds[4]+1:cinds[5]])
+    end
 end
 
 """
@@ -156,6 +159,35 @@ function nDtsne(X, n, reduce_dims = 0, max_iter = 1000; perplexity = 15.0,
 end
 
 """
+    nDumap(X, n; [max_samples, args, kwargs])
+
+Returns an n-dimensional representation of X using the UMAP transform.
+The arguments args and kwargs respond to the umap.UMAP function arguments.
+The second return variable are the indices of sampled samples.
+"""
+function nDumap(X, n; max_samples = 10000, kwargs...)
+    M,N = size(X)
+    uN = min(N,max_samples) # no. of used samples
+    println("sampling $uN samples")
+    sinds = sort(sample(1:N, uN, replace = false))
+    Y, pt,_,_,_ = @timed transpose(umap.UMAP(n_components = n; kwargs...)[:fit_transform](transpose(X[:,sinds])))
+    println("UMAP computed in $(pt)s")
+    return Y, sinds
+end
+
+
+"""
+	precompile_nDumap()
+
+Run UMAP with a small input array so it is precompiled and then runs faster. 
+Compialtion is done both in Julia and Numba.
+"""
+function precompile_nDumap(;kwargs...)
+	X = randn(4,10)
+	nDumap(X,2; kwargs...)
+end
+
+"""
     partition(xinds, sinds)
 
 Compute number of samples in individual groups defined by original group indices
@@ -178,31 +210,35 @@ function savetxt(bs::Basicset, path, trans = true)
     for field in fieldnames(typeof(bs))
         x = getfield(bs, field)
         if prod(size(x)) > 0
-        	if trans
-	            writedlm(string(joinpath(path, String(field)), ".txt"),transpose(x))
-	        else
-	        	writedlm(string(joinpath(path, String(field)), ".txt"),x)
-	        end
+            if trans
+                writedlm(string(joinpath(path, String(field)), ".txt"),transpose(x))
+            else
+                writedlm(string(joinpath(path, String(field)), ".txt"),x)
+            end
         end
     end
 end
 
 """
-    dataset2D(bs::Basicset, variant = ["pca", "tsne"], normalize = true)
+    dataset2D(bs::Basicset, variant = ["pca", "tsne", "umap"], normalize = true)
 
 Transforms a Basicset into 2D representation using PCA or tSne. 
 """
-function dataset2D(bs::Basicset, variant = "pca", normalize = true, max_samples = 2000,
-	perplexity = 15.0)
-    (variant in ["pca", "tsne"]) ? nothing : error("variant must be one of [pca, tsne]")
+function dataset2D(bs::Basicset, variant = "pca", normalize = true, max_samples = 2000;
+    kwargs...)
+    (variant in ["pca", "tsne", "umap"]) ? nothing : error("variant must be one of [pca, tsne, umap]")
     X, inds = cat(bs)
     (normalize) ? X = standardize(X) : nothing
     if variant == "pca"
         return uncat(nDpca(X, 2), inds)
-    else
-        _X, sinds = nDtsne(X,2;max_samples=max_samples, perplexity=perplexity)
+    elseif variant == "tsne"
+        _X, sinds = nDtsne(X,2;max_samples=max_samples, kwargs...)
         _inds = partition(inds, sinds)
         return uncat(_X, _inds)
+    elseif variant == "umap"
+        _X, sinds = nDumap(X,2;max_samples=max_samples, kwargs...)
+        _inds = partition(inds, sinds)
+        return uncat(_X, _inds)        
     end
 end
 
@@ -211,109 +247,127 @@ end
 
 Transforms a dataset 
 """
-function dataset2D(inpath, outpath, variant = "pca", normalize = true, max_samples = 2000,
-	perplexity = 15.0)
-    (variant in ["pca", "tsne"]) ? nothing : error("variant must be one of [pca, tsne]")
+function dataset2D(inpath, outpath, variant = "pca", normalize = true, max_samples = 2000;
+    kwargs...)
+    (variant in ["pca", "tsne", "umap"]) ? nothing : error("variant must be one of [pca, tsne, umap]")
     dataset = Basicset(inpath)
     # so that only easy and medium anomalies are used if possible
     if (variant == "tsne") && 
-    	(size(dataset.normal,2) + size(dataset.easy,2) + size(dataset.medium,2) + 
-    	 	size(dataset.hard,2) + size(dataset.very_hard,2)) > max_samples
-    	dataset = Basicset(dataset.normal, dataset.easy, dataset.medium, 
-    		Array{Float,2}(undef,0,0),
-    		Array{Float,2}(undef,0,0))
-	end
-    _dataset = dataset2D(dataset, variant, normalize, max_samples, perplexity)
+        (size(dataset.normal,2) + size(dataset.easy,2) + size(dataset.medium,2) + 
+             size(dataset.hard,2) + size(dataset.very_hard,2)) > max_samples
+        dataset = Basicset(dataset.normal, dataset.easy, dataset.medium, 
+            Array{Float,2}(undef,0,0),
+            Array{Float,2}(undef,0,0))
+    end
+    _dataset = dataset2D(dataset, variant, normalize, max_samples; kwargs...)
     savetxt(_dataset, outpath)
+    println("processed $outpath")
     return _dataset
 end
 
 """
-	scatter_tsne(path)
+    scatter_2D(path)
 
 Given a path with saved data, this will plot the first two dimensions of a dataset labeled
 according to the anomaly detection classes.
 """
-function scatter_tsne(path)
-	data = Basicset(path)
-	figure()
-	title(basename(path))
-	scatter(data.normal[1,:], data.normal[2,:], label = "normal", s= 5)
-	for field in filter(x -> x != :normal, [f for f in fieldnames(typeof(data))])
+function scatter_2D(path)
+    data = Basicset(path)
+    figure()
+    title(basename(path))
+    scatter(data.normal[1,:], data.normal[2,:], label = "normal", s=3)
+    for field in filter(x -> x != :normal, [f for f in fieldnames(typeof(data))])
         x = getfield(data,field)
         m = size(x,2)
         if m!= 0
-            scatter(x[1,:],x[2,:],label=string(field), s= 5)
+            scatter(x[1,:],x[2,:],label=string(field), s=3)
         end
     end
     legend()
 end
 
 """
-	multiclass_to_ad(data, labels, class)
+    multiclass_to_ad(data, labels, class)
 
 Return the data matrix separated into a normal class and anomaly class,
 where anomaly class is given by an id. Observations are rows of data.
 """
 function multiclass_to_ad(data, labels::Array, class)
-	normal = data[labels.!=class,:]
-	anomalous = data[labels.==class,:]
-	return normal, anomalous
+    normal = data[labels.!=class,:]
+    anomalous = data[labels.==class,:]
+    return normal, anomalous
 end
 
 """
-	multiclass_to_ad(inpath::String, outpath::String, data_cols_start, class_col; 
+    multiclass_to_ad(data, labels, normal_class, anomalous_class)
+
+Return the data matrix separated into a normal class and anomaly class,
+where both classes are given by an id. Observations are rows of data.
+"""
+function multiclass_to_ad(data, labels::Array, n_class, a_class)
+    normal = data[labels.==n_class,:]
+    anomalous = data[labels.==a_class,:]
+    return normal, anomalous
+end
+
+"""
+    multiclass_to_ad(inpath::String, outpath::String, data_cols_start, class_col; 
 
 From a given inpath, it loads the data.csv file and creates N binary anomaly detection problems
 in outpath.
 """
 function multiclass_to_ad(inpath::String, outpath::String, data_cols_start, class_col; 
-	data_cols_end = nothing, header=0,trans=false)
-	infile = joinpath(inpath, "data.csv")
-	df = CSV.File(infile, header = header) |> DataFrame
-	N,M = size(df)
-	dataset = basename(inpath)
- 	# extract data
- 	data_cols_end == nothing ? nothing : M = data_cols_end
- 	X = convert(Array, df[data_cols_start:M])
- 	trans ? X = transpose(X) : nothing
- 	# extract class label
- 	labels = df[class_col]
- 	for class in unique(labels)
- 		normal, anomalous = multiclass_to_ad(X, labels, class)
- 		class_path = joinpath(outpath,"$(dataset)-$(class)")
- 		mkpath(class_path)
- 		fn = joinpath(class_path, "normal.txt")
- 		fa = joinpath(class_path, "medium.txt")
- 		writedlm(fn, normal)
- 		writedlm(fa, anomalous)
- 	end
- 	return X, labels
+    data_cols_end = nothing, header=0,trans=false)
+    infile = joinpath(inpath, "data.csv")
+    df = CSV.File(infile, header = header) |> DataFrame
+    N,M = size(df)
+    dataset = basename(inpath)
+	# extract data
+	data_cols_end == nothing ? nothing : M = data_cols_end
+	X = convert(Array, df[data_cols_start:M])
+	trans ? X = transpose(X) : nothing
+	# extract class label
+	labels = df[class_col]
+	classes = unique(labels)
+	class_sizes = [size(X[labels.==class,:],1) for class in classes]
+	i_max_class = argmax(class_sizes) # select the largest class as the normal one
+	max_class = classes[i_max_class]
+	for class in filter(x->x != max_class, classes)
+		normal, anomalous = multiclass_to_ad(X, labels, max_class, class)
+		class_path = joinpath(outpath,"$(dataset)-$(max_class)-$(class)")
+		mkpath(class_path)
+		fn = joinpath(class_path, "normal.txt")
+		fa = joinpath(class_path, "medium.txt")
+		writedlm(fn, normal)
+		writedlm(fa, anomalous)
+	end
+    return X, labels
 end
 
 function onehot(x::Vector)
-	cats = unique(x)
-	M = length(cats)
-	N = length(x)
-	res = fill(0,N,M)
-	for (i,c) in enumerate(cats)
-		res[x.==c,i] .= 1
-	end
-	return res
+    cats = unique(x)
+    M = length(cats)
+    N = length(x)
+    res = fill(0,N,M)
+    for (i,c) in enumerate(cats)
+        res[x.==c,i] .= 1
+    end
+    return res
 end
 
 function onehot(X, id::Int)
-	if any(size(X) .== 0)
-		return Array{Float,2}(undef,0,0)
-	else
-		return cat(onehot(X[:,id]), X[:,1:size(X,2) .!= id], dims = 2)
-	end
+    if any(size(X) .== 0)
+        return Array{Float,2}(undef,0,0)
+    else
+        return cat(onehot(X[:,id]), X[:,1:size(X,2) .!= id], dims = 2)
+    end
 end
 
 function onehot(path::String,id::Int)
-	X, inds = cat(Basicset(path))
-	X = transpose(X)
-	Y = onehot(X,id)
-	savetxt(uncat(transpose(Y),inds,true),path,false)
-	return Y, size(Y,2) - size(X,2), inds
+    X, inds = cat(Basicset(path))
+    X = transpose(X)
+    Y = onehot(X,id)
+    savetxt(uncat(transpose(Y),inds,true),path,false)
+    return Y, size(Y,2) - size(X,2), inds
 end
+

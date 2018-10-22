@@ -2,13 +2,9 @@
 include("utils.jl")
 
 global dataset = ARGS[1]
-host = gethostname()
 #master path where data will be stored
-if host == "vit"
-	master_path = "/home/vit/vyzkum/anomaly_detection/data/UCI"
-elseif host == "axolotl.utia.cas.cz"
-	master_path = "/home/skvara/work/anomaly_detection/data/UCI"
-end
+master_path = dirname(@__FILE__)
+
 ppath = joinpath(master_path, "processed") 
 datasets = filter(x->x[1:length(dataset)] == dataset, 
 	filter(x->length(x) >= length(dataset), readdir(ppath)))
