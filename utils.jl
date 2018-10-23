@@ -149,13 +149,9 @@ The second return variable are the indices of sampled samples.
 """
 function nDtsne(X, n, reduce_dims = 0, max_iter = 1000; perplexity = 15.0,
     max_samples = 1000, verbose = true, progress = true, kwargs...)
-    M,N = size(X)
-    uN = min(N,max_samples) # no. of used samples
-    println("sampling $uN samples")
-    sinds = sort(sample(1:N, uN, replace = false))
-    Y = transpose(tsne(transpose(X[:,sinds]),n, reduce_dims, max_iter, perplexity;
+    Y = transpose(tsne(transpose(X),n, reduce_dims, max_iter, perplexity;
                 verbose = verbose, progress = progress, kwargs...))
-    return Y, sinds
+    return Y
 end
 
 """
@@ -165,14 +161,10 @@ Returns an n-dimensional representation of X using the UMAP transform.
 The arguments args and kwargs respond to the umap.UMAP function arguments.
 The second return variable are the indices of sampled samples.
 """
-function nDumap(X, n; max_samples = 10000, kwargs...)
-    M,N = size(X)
-    uN = min(N,max_samples) # no. of used samples
-    println("sampling $uN samples")
-    sinds = sort(sample(1:N, uN, replace = false))
-    Y, pt,_,_,_ = @timed transpose(umap.UMAP(n_components = n; kwargs...)[:fit_transform](transpose(X[:,sinds])))
+function nDumap(X, n;kwargs...)
+    Y, pt,_,_,_ = @timed transpose(umap.UMAP(n_components = n; kwargs...)[:fit_transform](transpose(X)))
     println("UMAP computed in $(pt)s")
-    return Y, sinds
+    return Y
 end
 
 
@@ -229,16 +221,24 @@ function dataset2D(bs::Basicset, variant = "pca", normalize = true, max_samples 
     (variant in ["pca", "tsne", "umap"]) ? nothing : error("variant must be one of [pca, tsne, umap]")
     X, inds = cat(bs)
     (normalize) ? X = standardize(X) : nothing
+
+    # subsample if needed
+    M,N = size(X)
+    uN = min(N,max_samples) # no. of used samples
+    println("sampling $uN samples")
+    sinds = sort(sample(1:N, uN, replace = false))
+    X = X[:,sinds]
+
     if variant == "pca"
-        return uncat(nDpca(X, 2), inds)
+        return uncat(nDpca(X, 2), inds), sinds
     elseif variant == "tsne"
-        _X, sinds = nDtsne(X,2;max_samples=max_samples, kwargs...)
+        _X = nDtsne(X,2; kwargs...)
         _inds = partition(inds, sinds)
-        return uncat(_X, _inds)
+        return uncat(_X, _inds), sinds
     elseif variant == "umap"
-        _X, sinds = nDumap(X,2;max_samples=max_samples, kwargs...)
+        _X = nDumap(X,2; kwargs...)
         _inds = partition(inds, sinds)
-        return uncat(_X, _inds)        
+        return uncat(_X, _inds), sinds
     end
 end
 
@@ -259,8 +259,28 @@ function dataset2D(inpath, outpath, variant = "pca", normalize = true, max_sampl
             Array{Float,2}(undef,0,0),
             Array{Float,2}(undef,0,0))
     end
-    _dataset = dataset2D(dataset, variant, normalize, max_samples; kwargs...)
-    savetxt(_dataset, outpath)
+    _dataset, sinds = dataset2D(dataset, variant, normalize, max_samples; kwargs...)
+	savetxt(_dataset, outpath)
+    
+	# copy class labels if needed
+	fln = joinpath(inpath, "normal_labels.txt")
+	flm = joinpath(inpath, "medium_labels.txt")
+	if !isfile(fln)
+		println("no labels found, skipping...")
+	else
+		# get labels
+		n_labels = readdlm(fln)
+		a_labels = readdlm(flm)
+		labels = vec(cat(n_labels, a_labels, dims = 1))
+		n_class = n_labels[1]
+		# subsample
+		labels = labels[sinds]
+	
+		# also, copy labels if they are available
+		writedlm(joinpath(outpath, "normal_labels.txt"), labels[labels.==n_class])
+		writedlm(joinpath(outpath, "medium_labels.txt"), labels[labels.!=n_class])
+	end
+
     println("processed $outpath")
     return _dataset
 end
@@ -271,16 +291,16 @@ end
 Given a path with saved data, this will plot the first two dimensions of a dataset labeled
 according to the anomaly detection classes.
 """
-function scatter_2D(path)
+function scatter_2D(path; kwargs...)
     data = Basicset(path)
     figure()
     title(basename(path))
-    scatter(data.normal[1,:], data.normal[2,:], label = "normal", s=3)
+    scatter(data.normal[1,:], data.normal[2,:]; label = "normal", kwargs...)
     for field in filter(x -> x != :normal, [f for f in fieldnames(typeof(data))])
         x = getfield(data,field)
         m = size(x,2)
         if m!= 0
-            scatter(x[1,:],x[2,:],label=string(field), s=3)
+            scatter(x[1,:],x[2,:];label=string(field), kwargs...)
         end
     end
     legend()
@@ -403,8 +423,6 @@ function split_multiclass(inpath::String, outpath::String)
 		classes = unique(labels)
 	    dataset = basename(inpath)
 		
-
-
 		# split them to multiple two class problems
 		for class in filter(x->x != n_class, classes)
 			normal, anomalous = multiclass_to_ad(X, labels, n_class, class)

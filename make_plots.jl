@@ -1,7 +1,10 @@
-# call as julia make_plots.jl dataset
+# call as julia make_plots.jl dataset [size alpha]
 include("utils.jl")
 
 dataset = ARGS[1]
+s = (length(ARGS) > 1) ? Int(Meta.parse(ARGS[2])) : 3
+alpha = (length(ARGS) > 2) ? Float64(Meta.parse(ARGS[3])) : 1.0
+
 #master path where data will be stored
 master_path = dirname(@__FILE__)
 
@@ -15,7 +18,7 @@ for _dataset in datasets
 	outpath = joinpath(master_path, "umap", _dataset)
 
 	# also, plot it
-	scatter_2D(outpath)
+	scatter_2D(outpath; s = s, alpha = alpha)
 	f = joinpath(plotpath, string(_dataset, ".png"))
 	mkpath(dirname(f))
 	savefig(f)

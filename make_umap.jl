@@ -31,7 +31,4 @@ for _dataset in datasets
 		min_dist = min_dist,
 		metric = metric)
 
-	# also, copy labels if they are available
-	copy_if_exists(joinpath(inpath, "normal_labels.txt"), outpath)
-	copy_if_exists(joinpath(inpath, "medium_labels.txt"), outpath)
 end
