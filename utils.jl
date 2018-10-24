@@ -293,7 +293,6 @@ according to the anomaly detection classes.
 """
 function scatter_2D(path; kwargs...)
     data = Basicset(path)
-    figure()
     title(basename(path))
     scatter(data.normal[1,:], data.normal[2,:]; label = "normal", kwargs...)
     for field in filter(x -> x != :normal, [f for f in fieldnames(typeof(data))])
@@ -303,7 +302,6 @@ function scatter_2D(path; kwargs...)
             scatter(x[1,:],x[2,:];label=string(field), kwargs...)
         end
     end
-    legend()
 end
 
 """

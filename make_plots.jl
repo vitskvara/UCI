@@ -18,7 +18,9 @@ for _dataset in datasets
 	outpath = joinpath(master_path, "umap", _dataset)
 
 	# also, plot it
+	figure()
 	scatter_2D(outpath; s = s, alpha = alpha)
+	legend()
 	f = joinpath(plotpath, string(_dataset, ".png"))
 	mkpath(dirname(f))
 	savefig(f)
