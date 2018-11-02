@@ -8,7 +8,8 @@ for field in fieldnames(typeof(data))
 	println(field, ": ", size(getfield(data, field)))
 end
 # this creates training dataset with no anomalies and testing dataset with all anomalies
-X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8)
+# data are split randomly, but you can fix the seed
+X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8; seed = 123)
 # this creates testing dataset with hard only anomalies
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8, difficulty = :hard)
 # this creates testing dataset with easy an very_hard only anomalies
