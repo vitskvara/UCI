@@ -1,3 +1,9 @@
+"""
+   ADDataset
+
+A structure representing an anomaly detection dataset with one normal class and
+multiple anomaly classes split according to their difficulty. 
+"""
 struct ADDataset
     normal::Array{Float, 2}
     easy::Array{Float, 2}
@@ -16,8 +22,9 @@ txt2array(file::String) = isfile(file) ? readdlm(file) : Array{Float32,2}(undef,
 """ 
     ADDataset(path)
 
-Outer constructor for the Basicset struct using a folder in the Loda database.
-Transposes the arrays so that instances are columns.
+Constructor for the Basicset struct using a folder in the Loda database.
+Transposes the arrays so that instances are columns. If a file (anomaly class)
+is missing, an empty array is in its place in the resulting structure.
 """
 ADDataset(path::String) = (isdir(path)) ? ADDataset(
     txt2array(joinpath(path, "normal.txt"))',
@@ -27,11 +34,37 @@ ADDataset(path::String) = (isdir(path)) ? ADDataset(
     txt2array(joinpath(path, "very_hard.txt"))',
     ) : error("No such path exists.")
 
+"""
+    vec2int(x)
+
+Convert Float labels read by readdlm to Ints for prettier dataset names.
+"""
 vec2int(x::Vector) = map(y-> (typeof(y)<:Real) ? Int(y) : y, x) 
+
+"""
+    load_class_labels(path)
+
+Load class labels saved in path.    
+"""
 load_class_labels(path) = vec2int(vec(readdlm(joinpath(path,"normal_labels.txt")))), 
     vec2int(vec(readdlm(joinpath(path,"medium_labels.txt"))))
 
-function  get_umap_data(dataset::String, path::String)
+"""
+    get_datapath()
+
+Get the absolut path of UMAP data.
+"""
+get_datapath() = joinpath(dirname(@__FILE__), "../umap")
+
+"""
+    get_umap_data(dataset_name, path)
+
+For a given dataset name, loads the data from given directory.  Returns a structure of
+type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
+problem, then the labels equal to nothing.
+"""
+function get_umap_data(dataset::String, path::String = "")
+    path = (path=="" ? get_datapath() : path)
 	# get just those dirs that match the dataset pattern
 	dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
 			   	filter(x->length(x)>=length(dataset), 
@@ -51,6 +84,12 @@ function  get_umap_data(dataset::String, path::String)
 	return data, normal_class_labels, anomaly_class_labels
 end
 
+"""
+    create_multiclass(data::ADDataset, normal_labels, anomaly_labels)
+
+From given labels, return an iterable over all multiclass subproblems and the subproblem names. 
+Works even if the problem is not multiclass.
+"""
 create_multiclass(data::ADDataset, normal_labels, anomaly_labels) = 
     (normal_labels==nothing) ? [(data, "")] : [(ADDataset(data.normal, 
                                                 Array{Float32,2}(undef,0,0),
@@ -59,6 +98,11 @@ create_multiclass(data::ADDataset, normal_labels, anomaly_labels) =
                                                 Array{Float32,2}(undef,0,0)), "$(normal_labels[1])-$(class)"
                                                 ) for class in unique(anomaly_labels)]
                         
+"""
+    split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing)
+
+Creates training and testing data fro ma given ADDataset struct.
+"""
 function split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing)
     @assert 0 <= p <= 1
     normal = data.normal
