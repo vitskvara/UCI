@@ -33,6 +33,7 @@ for (subdata, class_label) in subdatasets
 	for field in [:normal, :medium]
 		println(field, ": ", size(getfield(subdata, field)))
 	end
+	_X_tr, _y_tr, _X_tst, _y_tst = UCI.split_data(subdata, 0.8)
 	println("")
 end
 
@@ -46,6 +47,7 @@ for (subdata, class_label) in subdatasets
 	for field in [:normal, :medium]
 		println(field, ": ", size(getfield(subdata, field)))
 	end
+	_X_tr, _y_tr, _X_tst, _y_tst = UCI.split_data(subdata, 0.8)
 	println("")
 end
 
