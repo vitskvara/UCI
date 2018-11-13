@@ -52,9 +52,16 @@ load_class_labels(path) = vec2int(vec(readdlm(joinpath(path,"normal_labels.txt")
 """
     get_datapath()
 
-Get the absolut path of UMAP data.
+Get the absolute path of UMAP data.
 """
 get_datapath() = joinpath(dirname(@__FILE__), "../umap")
+
+"""
+    get_raw_datapath()
+
+Get the absolute path the raw data.
+"""
+get_raw_datapath() = joinpath(dirname(@__FILE__), "../raw")
 
 """
     get_umap_data(dataset_name, path)
