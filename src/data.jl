@@ -102,6 +102,9 @@ function get_umap_data(dataset::String, subclass::Union{Int, String}; path::Stri
     data, normal_class_labels, anomaly_class_labels = get_umap_data(dataset; path=path)
     subsets = create_multiclass(data, normal_class_labels, anomaly_class_labels)
     Ns = length(subsets)
+    if Ns == 1
+        return data, normal_class_labels, anomaly_class_labels
+    end
     if typeof(subclass) == Int
         subclass = min(Ns,subclass)
         nlabel = normal_class_labels[1]
