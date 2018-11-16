@@ -3,7 +3,7 @@ Collection of UCI datasets tranformed into anomaly detection benchmarks.
 
 The `raw` directory contains the raw data downlaoded from the UCI website. In the `processed` directory, the anomaly detection benchmarks are saved. They are divided into up to 5 files according to their difficulty. Also, the `data_types.txt` file contains the information on feature types. Code `0` is for numerical features, integers `1,2,...` are used for different one-hot encoded categorical features. See `processed/abalone/data_types.txt` - abalone contains one categorical feature with 3 possible values which are in the first three columns of data.
 
-A UMAP transform to 2D is done for all datasets. N-class classification problems are split into more problems after the transformation. The largest class is fixed as the normal one, and then N-1 datasets are created with each of the remaining classes as the anomalous one. Transformed data are in the `umap` directory. Reffer to 'umap_grid_plots' to see the individual transformed datasets.
+A UMAP transform to 2D is done for all datasets. N-class classification problems are split into more problems after the transformation. The largest class is fixed as the normal one, and then N-1 datasets are created with each of the remaining classes as the anomalous one. Transformed data are in the `umap` directory. Reffer to `umap_grid_plots` to see the individual transformed datasets.
 
 Directory `scripts` containg bash scripts used to process the data.
 
@@ -50,7 +50,7 @@ for (subdata, class_label) in subdatasets
 end
 
 # create_multiclass works on non-multiclass problems as well
-# class label is and empty string
+# class label is an empty string
 dataset = "madelon"
 data, normal_labels, anomaly_labels = UCI.get_umap_data(dataset)
 subdatasets = UCI.create_multiclass(data, normal_labels, anomaly_labels)
