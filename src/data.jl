@@ -64,13 +64,13 @@ Get the absolute path the raw data.
 get_raw_datapath() = joinpath(dirname(@__FILE__), "../raw")
 
 """
-    get_umap_data(dataset_name, path)
+    get_umap_data(dataset_name; path)
 
 For a given dataset name, loads the data from given directory.  Returns a structure of
 type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
 problem, then the labels equal to nothing.
 """
-function get_umap_data(dataset::String, path::String = "")
+function get_umap_data(dataset::String; path::String = "")
     path = (path=="" ? get_datapath() : path)
 	# get just those dirs that match the dataset pattern
 	dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
@@ -89,6 +89,29 @@ function get_umap_data(dataset::String, path::String = "")
 	end
 
 	return data, normal_class_labels, anomaly_class_labels
+end
+
+"""
+    get_umap_data(dataset_name, subclass; path)
+
+For a given dataset name, loads the data from given directory.  Returns a structure of
+type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
+problem, then the labels equal to nothing.
+"""
+function get_umap_data(dataset::String, subclass::Union{Int, String}; path::String = "")
+    data, normal_class_labels, anomaly_class_labels = get_umap_data(dataset; path=path)
+    subsets = create_multiclass(data, normal_class_labels, anomaly_class_labels)
+    Ns = length(subsets)
+    if typeof(subclass) == Int
+        subclass = min(Ns,subclass)
+        nlabel = normal_class_labels[1]
+        alabel = split(subsets[subclass][2], nlabel)[2][2:end]
+        return subsets[subclass][1], normal_class_labels, fill(alabel, sum(anomaly_class_labels.==alabel))
+    elseif typeof(subclass) == String
+        inds = occursin.(subclass, [x[2] for x in subsets])
+        if sum(inds)==0 error("no subclass $subclass in dataset $dataset") end
+        return subsets[inds][1][1], normal_class_labels, fill(subclass,  sum(anomaly_class_labels.==subclass))
+    end
 end
 
 """
