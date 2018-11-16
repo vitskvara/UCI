@@ -27,7 +27,7 @@ data, normal_labels, anomaly_labels = UCI.get_umap_data(dataset)
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8; seed = 123)
 # this creates testing dataset with hard only anomalies
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8, difficulty = :hard)
-# this creates testing dataset with easy an very_hard only anomalies
+# this creates testing dataset with easy and very_hard only anomalies
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8, difficulty = [:easy, :hard])
 
 # multiclass problem
@@ -36,7 +36,7 @@ dataset = "yeast"
 data, normal_labels, anomaly_labels = UCI.get_umap_data(dataset, 1)
 data, normal_labels, anomaly_labels = UCI.get_umap_data(dataset, "NUC")
 
-# ar you can get all the subproblems together and iterate over them afterwards
+# or you can get all the subproblems together and iterate over them afterwards
 data, normal_labels, anomaly_labels = UCI.get_umap_data(dataset)
 subdatasets = UCI.create_multiclass(data, normal_labels, anomaly_labels)
 for (subdata, class_label) in subdatasets
