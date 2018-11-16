@@ -15,7 +15,8 @@ Use 'Pkg.clone' with this repository adress.
 
 # Example usage
 
-```using UCI
+```julia
+using UCI
 
 # single class problem
 dataset = "abalone"
