@@ -35,6 +35,43 @@ ADDataset(path::String) = (isdir(path)) ? ADDataset(
     ) : error("No such path exists.")
 
 """
+    normalize(Y)
+
+Scales down a 2 dimensional array so it has approx. standard normal distribution. 
+Instance = column. 
+"""
+function normalize(Y::Array{T,2} where T<:Real)
+    M, N = size(Y)
+    mu = Statistics.mean(Y,dims=2);
+    sigma = Statistics.var(Y,dims=2);
+
+    # if there are NaN present, then sigma is zero for a given column -> 
+    # the scaled down column is also zero
+    # but we treat this more economically by setting the denominator for a given column to one
+    # also, we deal with numerical zeroes
+    den = sigma
+    den[abs.(den) .<= 1e-15] .= 1.0
+    den[den .== 0.0] .= 1.0
+    den = repeat(sqrt.(den), 1, N)
+    nom = Y - repeat(mu, 1, N)
+    nom[abs.(nom) .<= 1e-8] .= 0.0
+    Y = nom./den
+    return Y
+end
+
+"""
+   normalize(x,y)
+
+Concatenate x and y along the 2nd axis, normalize them and split them again. 
+"""
+function normalize(x,y)
+    M,N = size(x)
+    data = cat(x, y, dims = 2)
+    data = normalize(data)
+    return data[:, 1:N], data[:, N+1:end]
+end
+
+"""
     vec2int(x)
 
 Convert Float labels read by readdlm to Ints for prettier dataset names.
@@ -132,11 +169,13 @@ create_multiclass(data::ADDataset, normal_labels, anomaly_labels) =
                                                 ) for class in unique(anomaly_labels)]
                         
 """
-    split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing)
+    split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing,
+        standardize=false)
 
 Creates training and testing data fro ma given ADDataset struct.
 """
-function split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing)
+function split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing, 
+    standardize=false)
     @assert 0 <= p <= 1
     normal = data.normal
     if difficulty == nothing # sample all anomaly classes into the test dataset
@@ -167,6 +206,11 @@ function split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = n
     N = size(normal,2)
     normal = normal[:,StatsBase.sample(1:N, N, replace = false)]
     Random.seed!() # reset the seed
+
+    # normalize the data if necessary (so that they have 0 mean and unit variance)
+    if standardize
+        normal, anomalous = normalize(normal, anomalous)
+    end
 
     # split the data
     Ntr = Int(floor(p*N))
