@@ -11,10 +11,10 @@ using Test
 	yc = UCI.create_multiclass(xc...)
 		
 	data_path = joinpath(dirname(@__FILE__), "../umap")
-	@test abspath(UCI.get_datapath()) == abspath(data_path)
+	@test abspath(UCI.get_umap_datapath()) == abspath(data_path)
 
 	dataset = "yeast"
-	xy = UCI.get_umap_data(dataset, data_path)
+	xy = UCI.get_umap_data(dataset; path=data_path)
 	yy = UCI.create_multiclass(xy...)
 
 	zaa = UCI.split_data(ya[1][1], 0.8)
@@ -48,4 +48,12 @@ using Test
 	@test sum(zya[2])  == sum(zyem[2]) == 0 
 	@test size(zya[3],2) == size(zyem[3],2)
 	@test sum(zya[4]) == sum(zyem[4]) > 0
+
+	dataset = "two-moons"
+	data = UCI.get_synthetic_data(dataset)
+	@test size(data.normal) == (2,500)
+	@test size(data.medium) == (2,500)
+	X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8)
+	@test size(X_tr) == (2,400)
+	@test size(X_tst) == (2,600)
 end

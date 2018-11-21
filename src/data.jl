@@ -87,11 +87,11 @@ load_class_labels(path) = vec2int(vec(readdlm(joinpath(path,"normal_labels.txt")
     vec2int(vec(readdlm(joinpath(path,"medium_labels.txt"))))
 
 """
-    get_datapath()
+    get_umap_datapath()
 
 Get the absolute path of UMAP data.
 """
-get_datapath() = joinpath(dirname(@__FILE__), "../umap")
+get_umap_datapath() = joinpath(dirname(@__FILE__), "../umap")
 
 """
     get_raw_datapath()
@@ -101,6 +101,13 @@ Get the absolute path the raw data.
 get_raw_datapath() = joinpath(dirname(@__FILE__), "../raw")
 
 """
+    get_synthetic_datapath()
+
+Get the absolute path of UMAP data.
+"""
+get_synthetic_datapath() = joinpath(dirname(@__FILE__), "../synthetic")
+
+"""
     get_umap_data(dataset_name; path)
 
 For a given dataset name, loads the data from given directory.  Returns a structure of
@@ -108,7 +115,7 @@ type ADDataset, normal and anomalous data class labels. If dataset is not a mult
 problem, then the labels equal to nothing.
 """
 function get_umap_data(dataset::String; path::String = "")
-    path = (path=="" ? get_datapath() : path)
+    path = (path=="" ? get_umap_datapath() : path)
 	# get just those dirs that match the dataset pattern
 	dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
 			   	filter(x->length(x)>=length(dataset), 
@@ -152,6 +159,18 @@ function get_umap_data(dataset::String, subclass::Union{Int, String}; path::Stri
         if sum(inds)==0 error("no subclass $subclass in dataset $dataset") end
         return subsets[inds][1][1], normal_class_labels, fill(subclass,  sum(anomaly_class_labels.==subclass))
     end
+end
+
+"""
+    get_synthetic_data(dataset_name; path)
+
+For a given synthetic dataset name, loads the data from given directory. Returns a structure of
+type ADDataset.
+"""
+function get_synthetic_data(dataset::String; path::String = "")
+    path = (path=="" ? get_synthetic_datapath() : path)
+    dataset_dir = joinpath(path, dataset)
+    return ADDataset(dataset_dir)
 end
 
 """
