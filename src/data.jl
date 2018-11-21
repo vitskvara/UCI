@@ -32,7 +32,7 @@ ADDataset(path::String) = (isdir(path)) ? ADDataset(
     txt2array(joinpath(path, "medium.txt"))',
     txt2array(joinpath(path, "hard.txt"))',
     txt2array(joinpath(path, "very_hard.txt"))',
-    ) : error("No such path exists.")
+    ) : error("$path - no such path exists.")
 
 """
     normalize(Y)
