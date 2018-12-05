@@ -128,6 +128,8 @@ function get_umap_data(dataset::String; path::String = "")
 	data = ADDataset(dataset_dir)
 	if isfile(joinpath(dataset_dir, "normal_labels.txt"))
 		normal_class_labels, anomaly_class_labels = load_class_labels(dataset_dir)
+        normal_class_labels = string.(normal_class_labels)
+        anomaly_class_labels = string.(anomaly_class_labels)
 	else
 		normal_class_labels, anomaly_class_labels = nothing, nothing
 	end
