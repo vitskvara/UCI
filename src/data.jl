@@ -190,12 +190,14 @@ create_multiclass(data::ADDataset, normal_labels, anomaly_labels) =
                                                 ) for class in unique(anomaly_labels)]
                         
 """
-    split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing,
+    split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; seed = nothing, difficulty = nothing,
         standardize=false)
 
-Creates training and testing data fro ma given ADDataset struct.
+Creates training and testing data from a given ADDataset struct. 
+p is the ratio of training to testing dataset_name
+contamination is the contamination of the training dataset
 """
-function split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = nothing, 
+function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; seed = nothing, difficulty = nothing, 
     standardize=false)
     @assert 0 <= p <= 1
     normal = data.normal
@@ -235,6 +237,8 @@ function split_data(data::ADDataset, p::Real=0.8; seed = nothing, difficulty = n
 
     # split the data
     Ntr = Int(floor(p*N))
-    return normal[:,1:Ntr], fill(0,Ntr), # training data and labels
-        hcat(normal[:,Ntr+1:end], anomalous), vcat(fill(0,N-Ntr), fill(1,size(anomalous,2))) # testing data and labels
+    Natr = Int(floor(Ntr*contamination))
+    Natst = size(anomalous,2) - Natr
+    return hcat(normal[:,1:Ntr], anomalous[:,1:Natr]), vcat(fill(0,Ntr), fill(1,Natr)), # training data and labels
+        hcat(normal[:,Ntr+1:end], anomalous[:,Natr+1:end]), vcat(fill(0,N-Ntr), fill(1,Natst)) # testing data and labels
 end
