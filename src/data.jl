@@ -87,6 +87,13 @@ load_class_labels(path) = vec2int(vec(readdlm(joinpath(path,"normal_labels.txt")
     vec2int(vec(readdlm(joinpath(path,"medium_labels.txt"))))
 
 """
+    get_processed_datapath()
+
+Get the absolute path of UMAP data.
+"""
+get_processed_datapath() = joinpath(dirname(@__FILE__), "../processed")
+
+"""
     get_umap_datapath()
 
 Get the absolute path of UMAP data.
@@ -108,44 +115,42 @@ Get the absolute path of UMAP data.
 get_synthetic_datapath() = joinpath(dirname(@__FILE__), "../synthetic")
 
 """
-    get_umap_data(dataset_name; path)
+    get_data(dataset_name; path)
 
 For a given dataset name, loads the data from given directory.  Returns a structure of
 type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
 problem, then the labels equal to nothing.
 """
-function get_umap_data(dataset::String; path::String = "")
-    path = (path=="" ? get_umap_datapath() : path)
-	# get just those dirs that match the dataset pattern
-	dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
-			   	filter(x->length(x)>=length(dataset), 
-				readdir(path)))
-	# for multiclass problems, extract just data from the master directory
-	dir_name_lengths = length.(split.(dataset_dirs, "-"))
-	dataset_dir = joinpath(path, dataset_dirs[dir_name_lengths.==minimum(dir_name_lengths)][1])
+function get_data(dataset::String; path::String = "")
+    path = (path=="" ? get_processed_datapath() : path)
+    # get just those dirs that match the dataset pattern
+    dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
+                filter(x->length(x)>=length(dataset), 
+                readdir(path)))
+    # for multiclass problems, extract just data from the master directory
+    dir_name_lengths = length.(split.(dataset_dirs, "-"))
+    dataset_dir = joinpath(path, dataset_dirs[dir_name_lengths.==minimum(dir_name_lengths)][1])
 
-	# load data and class labels if available
-	data = ADDataset(dataset_dir)
-	if isfile(joinpath(dataset_dir, "normal_labels.txt"))
-		normal_class_labels, anomaly_class_labels = load_class_labels(dataset_dir)
+    # load data and class labels if available
+    data = ADDataset(dataset_dir)
+    if isfile(joinpath(dataset_dir, "normal_labels.txt"))
+        normal_class_labels, anomaly_class_labels = load_class_labels(dataset_dir)
         normal_class_labels = string.(normal_class_labels)
         anomaly_class_labels = string.(anomaly_class_labels)
-	else
-		normal_class_labels, anomaly_class_labels = nothing, nothing
-	end
+    else
+        normal_class_labels, anomaly_class_labels = nothing, nothing
+    end
 
-	return data, normal_class_labels, anomaly_class_labels
+    return data, normal_class_labels, anomaly_class_labels
 end
 
 """
-    get_umap_data(dataset_name, subclass; path)
+    get_data(dataset_name, subclass; path)
 
-For a given dataset name, loads the data from given directory.  Returns a structure of
-type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
-problem, then the labels equal to nothing.
+For a given dataset name, loads the subclass given by an index or subclass name.
 """
-function get_umap_data(dataset::String, subclass::Union{Int, String}; path::String = "")
-    data, normal_class_labels, anomaly_class_labels = get_umap_data(dataset; path=path)
+function get_data(dataset::String, subclass::Union{Int, String}; path::String = "")
+    data, normal_class_labels, anomaly_class_labels = get_data(dataset; path=path)
     subsets = create_multiclass(data, normal_class_labels, anomaly_class_labels)
     Ns = length(subsets)
     if Ns == 1
@@ -163,6 +168,25 @@ function get_umap_data(dataset::String, subclass::Union{Int, String}; path::Stri
     end
 end
 
+"""
+    get_umap_data(dataset_name; path)
+
+For a given dataset name, loads the data from given directory.  Returns a structure of
+type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
+problem, then the labels equal to nothing.
+"""
+get_umap_data(dataset::String) = get_data(dataset, path=get_umap_datapath())
+
+"""
+    get_umap_data(dataset_name, subclass; path)
+
+For a given dataset name, loads the data from given directory.  Returns a structure of
+type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
+problem, then the labels equal to nothing.
+"""
+get_umap_data(dataset::String, subclass::Union{Int, String}; path::String = "") =
+    get_data(dataset, subclass; path=get_umap_datapath())
+    
 """
     get_synthetic_data(dataset_name; path)
 
