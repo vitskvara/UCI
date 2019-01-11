@@ -184,7 +184,7 @@ For a given dataset name, loads the data from given directory.  Returns a struct
 type ADDataset, normal and anomalous data class labels. If dataset is not a multiclass
 problem, then the labels equal to nothing.
 """
-get_umap_data(dataset::String, subclass::Union{Int, String}; path::String = "") =
+get_umap_data(dataset::String, subclass::Union{Int, String}) =
     get_data(dataset, subclass; path=get_umap_datapath())
     
 """
