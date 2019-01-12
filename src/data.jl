@@ -261,7 +261,7 @@ function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; seed 
 
     # split the data
     Ntr = Int(floor(p*N))
-    Natr = Int(floor(Ntr*contamination))
+    Natr = min(Int(floor(Ntr*contamination)), Int(floor(size(anomalous,2)/2)))
     Natst = size(anomalous,2) - Natr
     return hcat(normal[:,1:Ntr], anomalous[:,1:Natr]), vcat(fill(0,Ntr), fill(1,Natr)), # training data and labels
         hcat(normal[:,Ntr+1:end], anomalous[:,Natr+1:end]), vcat(fill(0,N-Ntr), fill(1,Natst)) # testing data and labels
