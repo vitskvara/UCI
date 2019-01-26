@@ -221,7 +221,8 @@ Creates training and testing data from a given ADDataset struct.
 p is the ratio of training to testing dataset_name
 contamination is the contamination of the training dataset
 """
-function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; seed = nothing, difficulty = nothing, 
+function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; 
+    test_contamination=nothing, seed = nothing, difficulty = nothing, 
     standardize=false)
     @assert 0 <= p <= 1
     normal = data.normal
@@ -252,6 +253,8 @@ function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; seed 
     (seed == nothing) ? nothing : Random.seed!(seed)
     N = size(normal,2)
     normal = normal[:,StatsBase.sample(1:N, N, replace = false)]
+    Na = size(anomalous,2)
+    anomalous = anomalous[:,StatsBase.sample(1:Na, Na, replace = false)]
     Random.seed!() # reset the seed
 
     # normalize the data if necessary (so that they have 0 mean and unit variance)
@@ -260,9 +263,14 @@ function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0; seed 
     end
 
     # split the data
+    # TODO - maybe change this so the contamination is anomal/all and not anomal/normal?
     Ntr = Int(floor(p*N))
-    Natr = min(Int(floor(Ntr*contamination)), Int(floor(size(anomalous,2)/2)))
-    Natst = size(anomalous,2) - Natr
+    Natr = min(Int(floor(Ntr*contamination)), Int(floor(Na/2)))
+    if test_contamination == nothing
+        Natst = Na - Natr
+    else
+        Natst = min(Int(floor(test_contamination*(N-Ntr))), Na - Natr)
+    end
     return hcat(normal[:,1:Ntr], anomalous[:,1:Natr]), vcat(fill(0,Ntr), fill(1,Natr)), # training data and labels
-        hcat(normal[:,Ntr+1:end], anomalous[:,Natr+1:end]), vcat(fill(0,N-Ntr), fill(1,Natst)) # testing data and labels
+        hcat(normal[:,Ntr+1:end], anomalous[:,Natr+1:Natr+Natst]), vcat(fill(0,N-Ntr), fill(1,Natst)) # testing data and labels
 end
