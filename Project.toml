@@ -1,7 +1,7 @@
 name = "UCI"
 uuid = "a83054f2-ddd1-11e8-0102-5779cc6302e5"
 authors = ["vit.skvara <vit.skvara@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
