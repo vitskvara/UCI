@@ -14,7 +14,7 @@ using Test
 	@test abspath(UCI.get_umap_datapath()) == abspath(data_path)
 
 	dataset = "yeast"
-	xy = UCI.get_umap_data(dataset; path=data_path)
+	xy = UCI.get_umap_data(dataset)
 	yy = UCI.create_multiclass(xy...)
 
 	zaa = UCI.split_data(ya[1][1], 0.8)

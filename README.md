@@ -11,7 +11,9 @@ Now, this is also a Julia package with data extraction tools. See example usage 
 
 # Installation
 
-Use 'Pkg.clone' with this repository adress.
+```julia-pkg
+add https://github.com/vitskvara/UCI.jl.git
+```
 
 # Example usage
 
@@ -27,7 +29,7 @@ data, normal_labels, anomaly_labels = UCI.get_umap_data(dataset)
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8; seed = 123)
 # this creates testing dataset with hard only anomalies
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8, difficulty = :hard)
-# this creates testing dataset with easy and very_hard only anomalies
+# this creates testing dataset with easy and hard anomalies
 X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8, difficulty = [:easy, :hard])
 
 # multiclass problem
