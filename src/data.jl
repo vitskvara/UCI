@@ -115,6 +115,13 @@ Get the absolute path of UMAP data.
 get_synthetic_datapath() = joinpath(dirname(dirname(@__FILE__)), "synthetic")
 
 """
+    get_loda_datapath()
+
+Get the absolute path of Loda data.
+"""
+get_loda_datapath() = joinpath(dirname(dirname(@__FILE__)), "loda")
+
+"""
     get_data(dataset_name; path)
 
 For a given dataset name, loads the data from given directory.  Returns a structure of
@@ -127,6 +134,8 @@ function get_data(dataset::String; path::String = "")
     dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
                 filter(x->length(x)>=length(dataset), 
                 readdir(path)))
+    (length(dataset_dirs)==0) ? error("specified dataset not found!") : nothing
+
     # for multiclass problems, extract just data from the master directory
     dir_name_lengths = length.(split.(dataset_dirs, "-"))
     dataset_dir = joinpath(path, dataset_dirs[dir_name_lengths.==minimum(dir_name_lengths)][1])
@@ -197,6 +206,18 @@ function get_synthetic_data(dataset::String; path::String = "")
     path = (path=="" ? get_synthetic_datapath() : path)
     dataset_dir = joinpath(path, dataset)
     return ADDataset(dataset_dir)
+end
+
+"""
+    get_loda_data(dataset)
+
+For a given dataset name, loads the Loda data. Returns a structure of
+type ADDataset and two empty placeholder variables.
+"""
+function get_loda_data(dataset::String)
+    loda_path = get_loda_datapath()
+    (isdir(joinpath(loda_path, dataset))) ? get_data(dataset, path=loda_path) : 
+        get_data(dataset)
 end
 
 """

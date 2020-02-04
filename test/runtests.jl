@@ -2,6 +2,32 @@ using UCI
 using Test 
 
 @testset "DATA" begin
+	# class labels only in case of a multiclass dataset
+	dataset = "abalone"
+	xa = UCI.get_data(dataset)
+	@test size(xa[1].normal) != (0,0)
+	@test size(xa[1].easy) != (0,0)
+	@test xa[2] == xa[3] == nothing	
+
+	dataset = "breast-tissue"
+	xa = UCI.get_data(dataset)
+	@test size(xa[1].normal) != (0,0)
+	@test size(xa[1].easy) == (0,0)
+	@test xa[2] != xa[3] != nothing	
+
+	# loda data have no class labels
+	dataset = "abalone"
+	xa = UCI.get_loda_data(dataset)
+	@test size(xa[1].normal) != (0,0)
+	@test size(xa[1].easy) != (0,0)
+	@test xa[2] == xa[3] == nothing	
+
+	dataset = "breast-tissue"
+	xa = UCI.get_loda_data(dataset)
+	@test size(xa[1].normal) != (0,0)
+	@test size(xa[1].easy) != (0,0)
+	@test xa[2] == xa[3] == nothing	
+	
 	dataset = "abalone"
 	xa = UCI.get_umap_data(dataset)
 	ya = UCI.create_multiclass(xa...)
