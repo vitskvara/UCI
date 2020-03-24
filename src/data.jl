@@ -122,6 +122,37 @@ Get the absolute path of Loda data.
 get_loda_datapath() = joinpath(dirname(dirname(@__FILE__)), "loda")
 
 """
+    data_info(datapath)
+
+Returns a DataFrame
+"""
+function data_info(datapath)
+    datasets = readdir(datapath)
+    df = DataFrame(
+        :dataset=>String[],
+        :dim=>Int[],
+        :normal=>Int[],
+        :easy=>Int[],
+        :medium=>Int[],
+        :hard=>Int[],
+        :very_hard=>Int[]
+        )
+    for dataset in datasets
+        GC.gc()
+        data, _, _ = UCI.get_data(dataset, path = datapath)       
+        push!(df, [dataset, size(data.normal,1), size(data.normal,2), size(data.easy,2), 
+            size(data.medium,2), size(data.hard,2), size(data.very_hard,2)])
+    end
+    return df
+end
+
+# get just those dirs that match the dataset pattern
+_match_pattern(dataset, path) =
+     filter(x->x[1:length(dataset)]==dataset,
+                filter(x->length(x)>=length(dataset), 
+                readdir(path)))
+
+"""
     get_data(dataset_name; path)
 
 For a given dataset name, loads the data from given directory.  Returns a structure of
@@ -130,10 +161,13 @@ problem, then the labels equal to nothing.
 """
 function get_data(dataset::String; path::String = "")
     path = (path=="" ? get_processed_datapath() : path)
-    # get just those dirs that match the dataset pattern
-    dataset_dirs = filter(x->x[1:length(dataset)]==dataset,
-                filter(x->length(x)>=length(dataset), 
-                readdir(path)))
+    dataset_dirs = _match_pattern(dataset, path)
+    # non multiclass datasets are in the loda dir, so try again
+    if length(dataset_dirs) == 0
+        path = get_loda_datapath() 
+        dataset_dirs = _match_pattern(dataset, path)
+    end
+    # if still nothing was found, throw an error
     (length(dataset_dirs)==0) ? error("specified dataset not found!") : nothing
 
     # for multiclass problems, extract just data from the master directory
@@ -216,8 +250,18 @@ type ADDataset and two empty placeholder variables.
 """
 function get_loda_data(dataset::String)
     loda_path = get_loda_datapath()
-    (isdir(joinpath(loda_path, dataset))) ? get_data(dataset, path=loda_path) : 
-        get_data(dataset)
+    get_data(dataset, path=loda_path)
+end
+
+"""
+    get_processed_data(dataset::String)
+
+Get the processed (multiclass) data.
+"""
+function get_processed_data(dataset::String)
+    path = joinpath(get_processed_datapath(), dataset)
+    path = isdir(joinpath(path, dataset)) ? path : get_loda_datapath() 
+    get_data(dataset, path=path)
 end
 
 """

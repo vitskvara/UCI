@@ -4,6 +4,7 @@ using DelimitedFiles
 using Random
 using StatsBase
 using Statistics
+using DataFrames
 
 const Float = Float32
 
