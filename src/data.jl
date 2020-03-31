@@ -339,3 +339,22 @@ function split_data(data::ADDataset, p::Real=0.8, contamination::Real=0.0;
     return hcat(normal[:,1:Ntr], anomalous[:,1:Natr]), vcat(fill(0,Ntr), fill(1,Natr)), # training data and labels
         hcat(normal[:,Ntr+1:end], anomalous[:,Natr+1:Natr+Natst]), vcat(fill(0,N-Ntr), fill(1,Natst)) # testing data and labels
 end
+
+"""
+    split_val_test(x,y)
+
+Split data `x` and labels `y` to halves, preserving the ratios of positive and negative samples.
+"""
+function split_val_test(x,y)
+    n1 = sum(y)
+    n0 = length(y) - n1
+    n1n = floor(Int, n1/2)
+    n0n = floor(Int, n0/2)
+    inds1 = y.== 1
+    inds0 = y.== 0
+    val_x = hcat(x[:,inds0][:,1:n0n], x[:,inds1][:,1:n1n])
+    val_y = vcat(y[inds0][1:n0n], y[inds1][1:n1n])
+    test_x = hcat(x[:,inds0][:,n0n+1:2*n0n], x[:,inds1][:,n1n+1:2*n1n])
+    test_y = vcat(y[inds0][n0n+1:2*n0n], y[inds1][n1n+1:2*n1n])
+    return val_x, val_y, test_x, test_y
+end

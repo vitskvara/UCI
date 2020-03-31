@@ -79,7 +79,13 @@ using Test
 	data = UCI.get_synthetic_data(dataset)
 	@test size(data.normal) == (2,500)
 	@test size(data.medium) == (2,500)
-	X_tr, y_tr, X_tst, y_tst = UCI.split_data(data, 0.8)
+	X_tr, y_tr, X_tst, Y_tst = UCI.split_data(data, 0.8)
 	@test size(X_tr) == (2,400)
 	@test size(X_tst) == (2,600)
+
+	x_val, y_val, x_tst, y_tst = UCI.split_val_test(X_tst,Y_tst)
+	m, n = size(X_tst)
+	@test (m, floor(Int, n/2)) == size(x_val) == size(x_tst)
+	@test floor(Int, n/2) == length(y_val) == length(y_tst)
+	@test sum(y_val) + sum(y_tst) in [sum(Y_tst), sum(Y_tst)-1]
 end
